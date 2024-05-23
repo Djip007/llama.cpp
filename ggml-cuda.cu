@@ -3095,10 +3095,7 @@ GGML_CALL ggml_backend_buffer_t ggml_backend_cuda_buffer_from_ptr(int device, vo
 
     ggml_cuda_set_device(buft_ctx->device);
 
-    //const size_t page_size = 4096;
-    //ptr = (void *)((uintptr_t)ptr & ~(page_size - 1));
-
-    cudaError_t err = cudaHostRegister(ptr, size, cudaHostRegisterMapped | cudaHostRegisterReadOnly);
+    cudaError_t err = hipHostRegister(ptr, size, hipHostRegisterMapped); // | hipHostRegisterReadOnly);
     if (err != cudaSuccess) {
         // clear the error
         cudaGetLastError();
@@ -3106,13 +3103,23 @@ GGML_CALL ggml_backend_buffer_t ggml_backend_cuda_buffer_from_ptr(int device, vo
         return nullptr;
     }
 
+    // CoarseGrain ... if not 4 time slower
+    err = hipMemAdvise(ptr, size, hipMemAdviseSetCoarseGrain, buft_ctx->device);
+    if (err != cudaSuccess) {
+        // clear the error
+        cudaGetLastError();
+        GGML_CUDA_LOG_ERROR("%s: failed to config CoarseGrain memory: %s\n", __func__, cudaGetErrorString(err));
+        hipHostUnregister(ptr);
+        return nullptr;
+    }
+
     void * dev_ptr;
-    err = cudaHostGetDevicePointer(&dev_ptr, ptr, 0);
+    err = hipHostGetDevicePointer(&dev_ptr, ptr, 0);
     if (err != cudaSuccess) {
         // clear the error
         cudaGetLastError();
         GGML_CUDA_LOG_ERROR("%s: failed to get device pointer: %s\n", __func__, cudaGetErrorString(err));
-        cudaHostUnregister(ptr);
+        hipHostUnregister(ptr);
         return nullptr;
     }
 
