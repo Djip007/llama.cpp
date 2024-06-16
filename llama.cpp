@@ -25,6 +25,10 @@
 #  include "ggml-blas.h"
 #endif
 
+#ifdef GGML_USE_BF16
+#  include "ggml-bf16.h"
+#endif
+
 #ifdef GGML_USE_METAL
 #  include "ggml-metal.h"
 #endif
@@ -2306,6 +2310,9 @@ struct llama_context {
 #endif
 #ifdef GGML_USE_BLAS
     ggml_backend_t backend_blas = nullptr;
+#endif
+#ifdef GGML_USE_BF16
+    ggml_backend_t backend_bf16 = nullptr;
 #endif
     ggml_backend_t backend_cpu = nullptr;
 
@@ -16271,6 +16278,15 @@ struct llama_context * llama_new_context_with_model(
         }
 #endif
 
+#ifdef GGML_USE_BF16
+        ctx->backend_bf16 = ggml_backend_bf16_init();
+        if (ctx->backend_bf16 == nullptr) {
+            LLAMA_LOG_WARN("%s: failed to initialize BF16 backend\n", __func__);
+        } else {
+            ctx->backends.push_back(ctx->backend_bf16);
+        }
+#endif
+
 #if defined(GGML_USE_RPC)
         if (model->n_gpu_layers > 0) {
             for (const auto & endpoint : model->rpc_servers) {
@@ -18595,6 +18611,7 @@ const char * llama_print_system_info(void) {
     s += "SSSE3 = "       + std::to_string(ggml_cpu_has_ssse3())       + " | ";
     s += "VSX = "         + std::to_string(ggml_cpu_has_vsx())         + " | ";
     s += "MATMUL_INT8 = " + std::to_string(ggml_cpu_has_matmul_int8()) + " | ";
+    s += "POC_BF16 = "    + std::to_string(ggml_cpu_has_bf16())        + " | ";
 #ifdef GGML_USE_LLAMAFILE
     s += "LLAMAFILE = 1 | ";
 #else

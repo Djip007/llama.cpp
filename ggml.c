@@ -22510,6 +22510,15 @@ int ggml_cpu_has_blas(void) {
 #endif
 }
 
+int ggml_cpu_has_bf16(void) {
+#if defined(GGML_USE_BF16)
+    //return ggml_cpu_has_avx512_bf16(); // + RDNA3 / ...
+    return 1;
+#else
+    return 0;
+#endif
+}
+
 int ggml_cpu_has_cuda(void) {
 #if defined(GGML_USE_CUDA)
     return 1;

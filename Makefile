@@ -468,6 +468,14 @@ ifdef LLAMA_OPENBLAS64
 	OBJS        += ggml-blas.o
 endif # LLAMA_OPENBLAS64
 
+ifdef LLAMA_BF16
+	MK_CPPFLAGS += -DGGML_USE_BF16
+	#MK_CFLAGS   += $(shell pkg-config --cflags-only-other openblas)
+	#MK_LDFLAGS  += $(shell pkg-config --libs openblas)
+	OBJS        += ggml-bf16.o
+endif # LLAMA_BF16
+
+
 ifdef LLAMA_BLIS
 	MK_CPPFLAGS += -DGGML_USE_BLAS -I/usr/local/include/blis -I/usr/include/blis
 	MK_LDFLAGS  += -lblis -L/usr/local/lib
@@ -788,6 +796,9 @@ ggml-quants.o: ggml-quants.c ggml.h ggml-quants.h ggml-common.h
 
 ggml-blas.o: ggml-blas.cpp ggml-blas.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+ggml-bf16.o: ggml-bf16.cpp ggml-bf16.h
+	$(CXX) $(CXXFLAGS) -std=gnu++17 -c $< -o $@
 
 unicode.o: unicode.cpp unicode.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
