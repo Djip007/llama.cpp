@@ -10,6 +10,10 @@
 #include <string>
 #include <vector>
 
+#ifdef GGML_USE_CPU_TINYBLIS
+#include "tinyblis/tinyblis.h"
+#endif
+
 #ifdef GGML_USE_CPU_HBM
 #    include "ggml-cpu-hbm.h"
 #endif
@@ -38,6 +42,12 @@
 std::vector<ggml_backend_buffer_type_t>& ggml_backend_cpu_get_extra_buffers_type() {
     static std::vector<ggml_backend_buffer_type_t> bufts = []() {
         std::vector<ggml_backend_buffer_type_t> bufts;
+
+#ifdef GGML_USE_CPU_TINYBLIS
+        if (ggml_backend_cpu_tinyblis_buffer_type()) {
+            bufts.push_back(ggml_backend_cpu_tinyblis_buffer_type());
+        }
+#endif
 
 #if defined(__AMX_INT8__) && defined(__AVX512VNNI__)
         if (ggml_backend_amx_buffer_type()) {

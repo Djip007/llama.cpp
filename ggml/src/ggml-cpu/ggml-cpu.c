@@ -1,11 +1,15 @@
 #define _CRT_SECURE_NO_DEPRECATE // Disables "unsafe" warnings on Windows
 #define _USE_MATH_DEFINES // For M_PI on MSVC
 
+#define GGML_COMMON_DECL_C
+#include "ggml-common.h"
+
 #include "ggml-backend-impl.h"
 #include "ggml-backend.h"
 #include "ggml-cpu-traits.h"
 #include "ggml-cpu-impl.h"
 #include "ggml-cpu.h"
+#include "ggml-cpu-fp8.h"
 #include "ggml-impl.h"
 #include "ggml-cpu-quants.h"
 #include "ggml-threading.h"
@@ -362,6 +366,30 @@ static const struct ggml_type_traits_cpu type_traits_cpu[GGML_TYPE_COUNT] = {
         .from_float               = quantize_row_tq2_0,
         .vec_dot                  = ggml_vec_dot_tq2_0_q8_K,
         .vec_dot_type             = GGML_TYPE_Q8_K,
+        .nrows                    = 1,
+    },
+    [GGML_TYPE_E4M3_Q] = {
+        .from_float               = (ggml_from_float_t) quantize_row_e4m3_q,
+        .vec_dot                  = (ggml_vec_dot_t) ggml_vec_dot_e4m3_q,
+        .vec_dot_type             = GGML_FP8_VECT_DOT_TYPE,
+        .nrows                    = 1,
+    },
+    [GGML_TYPE_E3M4_Q] = {
+        .from_float               = (ggml_from_float_t) quantize_row_e3m4_q,
+        .vec_dot                  = (ggml_vec_dot_t) ggml_vec_dot_e3m4_q,
+        .vec_dot_type             = GGML_FP8_VECT_DOT_TYPE,
+        .nrows                    = 1,
+    },
+    [GGML_TYPE_FQ8_4] = {
+        .from_float               = (ggml_from_float_t) quantize_row_fq8_4,
+        .vec_dot                  = (ggml_vec_dot_t) ggml_vec_dot_fq8_4,
+        .vec_dot_type             = GGML_FP8_VECT_DOT_TYPE,
+        .nrows                    = 1,
+    },
+    [GGML_TYPE_FQ8_3] = {
+        .from_float               = (ggml_from_float_t) quantize_row_fq8_3,
+        .vec_dot                  = (ggml_vec_dot_t) ggml_vec_dot_fq8_3,
+        .vec_dot_type             = GGML_FP8_VECT_DOT_TYPE,
         .nrows                    = 1,
     },
 };

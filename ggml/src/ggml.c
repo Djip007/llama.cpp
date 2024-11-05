@@ -9,6 +9,8 @@
 
 // FIXME: required here for quantization functions
 #include "ggml-quants.h"
+#define GGML_COMMON_DECL_C
+#include "ggml-fp8.h"
 
 #ifdef GGML_USE_CPU_HBM
 #include <hbwmalloc.h>
@@ -841,6 +843,38 @@ static const struct ggml_type_traits type_traits[GGML_TYPE_COUNT] = {
         .type_size                = 0,
         .is_quantized             = false,
     },
+    [GGML_TYPE_E4M3_Q] = {
+        .type_name                = "e4m3_q",
+        .blck_size                = FP8_K,
+        .type_size                = sizeof(block_e4m3_q),
+        .is_quantized             = true,
+        .to_float                 = (ggml_to_float_t) dequantize_row_e4m3_q,
+        .from_float_ref           = (ggml_from_float_t) quantize_row_e4m3_q_ref,
+    },
+    [GGML_TYPE_E3M4_Q] = {
+        .type_name                = "e3m4_q",
+        .blck_size                = FP8_K,
+        .type_size                = sizeof(block_e3m4_q),
+        .is_quantized             = true,
+        .to_float                 = (ggml_to_float_t) dequantize_row_e3m4_q,
+        .from_float_ref           = (ggml_from_float_t) quantize_row_e3m4_q_ref,
+    },
+    [GGML_TYPE_FQ8_4] = {
+        .type_name                = "fq8_4",
+        .blck_size                = FQ8_K,
+        .type_size                = sizeof(block_fq8_4),
+        .is_quantized             = true,
+        .to_float                 = (ggml_to_float_t) dequantize_row_fq8_4,
+        .from_float_ref           = (ggml_from_float_t) quantize_row_fq8_4_ref,
+    },
+    [GGML_TYPE_FQ8_3] = {
+        .type_name                = "fq8_3",
+        .blck_size                = FQ8_K,
+        .type_size                = sizeof(block_fq8_3),
+        .is_quantized             = true,
+        .to_float                 = (ggml_to_float_t) dequantize_row_fq8_3,
+        .from_float_ref           = (ggml_from_float_t) quantize_row_fq8_3_ref,
+    },
 };
 
 const struct ggml_type_traits * ggml_get_type_traits(enum ggml_type type) {
@@ -1275,6 +1309,10 @@ enum ggml_type ggml_ftype_to_ggml_type(enum ggml_ftype ftype) {
         case GGML_FTYPE_MOSTLY_IQ4_XS:        wtype = GGML_TYPE_IQ4_XS;   break;
         case GGML_FTYPE_MOSTLY_IQ3_S:         wtype = GGML_TYPE_IQ3_S;    break;
         case GGML_FTYPE_MOSTLY_IQ2_S:         wtype = GGML_TYPE_IQ2_S;    break;
+        case GGML_FTYPE_MOSTLY_E4M3_Q:        wtype = GGML_TYPE_E4M3_Q;   break;
+        case GGML_FTYPE_MOSTLY_E3M4_Q:        wtype = GGML_TYPE_E3M4_Q;   break;
+        case GGML_FTYPE_MOSTLY_FQ8_4:         wtype = GGML_TYPE_FQ8_4;    break;
+        case GGML_FTYPE_MOSTLY_FQ8_3:         wtype = GGML_TYPE_FQ8_3;    break;
         case GGML_FTYPE_UNKNOWN:              wtype = GGML_TYPE_COUNT; break;
         case GGML_FTYPE_MOSTLY_Q4_1_SOME_F16: wtype = GGML_TYPE_COUNT; break;
     }
@@ -6477,6 +6515,26 @@ size_t ggml_quantize_chunk(
         case GGML_TYPE_IQ1_M:   result = quantize_iq1_m  (src + start, (char *) dst + start_row * row_size, nrows, n_per_row, imatrix); break;
         case GGML_TYPE_IQ4_NL:  result = quantize_iq4_nl (src + start, (char *) dst + start_row * row_size, nrows, n_per_row, imatrix); break;
         case GGML_TYPE_IQ4_XS:  result = quantize_iq4_xs (src + start, (char *) dst + start_row * row_size, nrows, n_per_row, imatrix); break;
+        case GGML_TYPE_E4M3_Q:
+            {   // move to ggml-cpu.c : type_traits[type].from_float(src + start, (char *) dst + start_row * row_size, (int64_t)nrows*n_per_row);
+                quantize_row_e4m3_q_ref(src + start, (block_e4m3_q*)((char *) dst + start_row * row_size), nrows*n_per_row);
+                result = nrows * row_size;
+            } break;
+        case GGML_TYPE_E3M4_Q:
+            {   // move to ggml-cpu.c : type_traits[type].from_float(src + start, (char *) dst + start_row * row_size, (int64_t)nrows*n_per_row);
+                quantize_row_e3m4_q_ref(src + start, (block_e3m4_q*)((char *) dst + start_row * row_size), nrows*n_per_row);
+                result = nrows * row_size;
+            } break;
+        case GGML_TYPE_FQ8_4:
+            {   // move to ggml-cpu.c : type_traits[type].from_float(src + start, (char *) dst + start_row * row_size, (int64_t)nrows*n_per_row);
+                quantize_row_fq8_4_ref(src + start, (block_fq8_4*)((char *) dst + start_row * row_size), nrows*n_per_row);
+                result = nrows * row_size;
+            } break;
+        case GGML_TYPE_FQ8_3:
+            {   // move to ggml-cpu.c : type_traits[type].from_float(src + start, (char *) dst + start_row * row_size, (int64_t)nrows*n_per_row);
+                quantize_row_fq8_3_ref(src + start, (block_fq8_3*)((char *) dst + start_row * row_size), nrows*n_per_row);
+                result = nrows * row_size;
+            } break;
         case GGML_TYPE_F16:
             {
                 size_t elemsize = sizeof(ggml_fp16_t);

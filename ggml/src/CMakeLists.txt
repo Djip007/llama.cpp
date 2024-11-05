@@ -198,6 +198,8 @@ add_library(ggml-base
             ggml-backend.cpp
             ggml_cpp_wrapper.cpp
             ggml_cpp_wrapper.h
+            ggml-fp8.cpp
+            ggml-fp8.h
             ggml-opt.cpp
             ggml-threading.cpp
             ggml-threading.h

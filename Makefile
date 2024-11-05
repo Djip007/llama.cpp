@@ -144,6 +144,10 @@ GGML_NO_OPENMP := 1
 DEPRECATE_WARNING := 1
 endif
 
+ifdef LLAMA_NO_OPENMP_SIMD
+GGML_NO_OPENMP_SIMD := 1
+endif
+
 ifdef LLAMA_NO_METAL
 GGML_NO_METAL := 1
 DEPRECATE_WARNING := 1
@@ -551,6 +555,12 @@ ifndef GGML_NO_OPENMP
 	MK_CFLAGS   += -fopenmp
 	MK_CXXFLAGS += -fopenmp
 endif # GGML_NO_OPENMP
+
+ifndef GGML_NO_OPENMP_SIMD
+	MK_CPPFLAGS += -DGGML_USE_OPENMP_SIMD
+	MK_CFLAGS   += -fopenmp-simd
+	MK_CXXFLAGS += -fopenmp-simd
+endif # GGML_NO_OPENMP_SIMD
 
 ifdef GGML_OPENBLAS
 	MK_CPPFLAGS  += -DGGML_USE_BLAS $(shell pkg-config --cflags-only-I openblas)
@@ -965,6 +975,7 @@ OBJ_GGML = \
 	$(DIR_GGML)/src/ggml-alloc.o \
 	$(DIR_GGML)/src/ggml-backend.o \
 	$(DIR_GGML)/src/ggml-backend-reg.o \
+	$(DIR_GGML)/src/ggml-fp8.o \
 	$(DIR_GGML)/src/ggml-opt.o \
 	$(DIR_GGML)/src/ggml-quants.o \
 	$(DIR_GGML)/src/ggml-threading.o \
@@ -972,6 +983,7 @@ OBJ_GGML = \
 	$(DIR_GGML)/src/ggml-cpu/ggml-cpu_cpp.o \
 	$(DIR_GGML)/src/ggml-cpu/ggml-cpu-aarch64.o \
 	$(DIR_GGML)/src/ggml-cpu/ggml-cpu-hbm.o \
+	$(DIR_GGML)/src/ggml-cpu/ggml-cpu-fp8.o \
 	$(DIR_GGML)/src/ggml-cpu/ggml-cpu-quants.o \
 	$(DIR_GGML)/src/ggml-cpu/ggml-cpu-traits.o \
 	$(OBJ_GGML_EXT)

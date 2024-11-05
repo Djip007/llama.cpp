@@ -59,6 +59,10 @@ static std::string llama_model_ftype_name(llama_ftype ftype) {
         case LLAMA_FTYPE_MOSTLY_IQ4_XS:   return "IQ4_XS - 4.25 bpw";
         case LLAMA_FTYPE_MOSTLY_IQ3_S:    return "IQ3_S - 3.4375 bpw";
         case LLAMA_FTYPE_MOSTLY_IQ3_M:    return "IQ3_S mix - 3.66 bpw";
+        case LLAMA_FTYPE_MOSTLY_E4M3_Q:   return "E4M3_Q";
+        case LLAMA_FTYPE_MOSTLY_E3M4_Q:   return "E3M4_Q";
+        case LLAMA_FTYPE_MOSTLY_FQ8_4:    return "FQ8_4";
+        case LLAMA_FTYPE_MOSTLY_FQ8_3:    return "FQ8_3";
 
         default: return "unknown, may not work";
     }
@@ -634,6 +638,10 @@ llama_model_loader::llama_model_loader(
             case GGML_TYPE_IQ4_NL:  ftype = LLAMA_FTYPE_MOSTLY_IQ4_NL;  break;
             case GGML_TYPE_IQ4_XS:  ftype = LLAMA_FTYPE_MOSTLY_IQ4_XS;  break;
             case GGML_TYPE_IQ3_S:   ftype = LLAMA_FTYPE_MOSTLY_IQ3_S;   break;
+            case GGML_TYPE_E4M3_Q:  ftype = LLAMA_FTYPE_MOSTLY_E4M3_Q;  break;
+            case GGML_TYPE_E3M4_Q:  ftype = LLAMA_FTYPE_MOSTLY_E3M4_Q;  break;
+            case GGML_TYPE_FQ8_4:   ftype = LLAMA_FTYPE_MOSTLY_FQ8_4;   break;
+            case GGML_TYPE_FQ8_3:   ftype = LLAMA_FTYPE_MOSTLY_FQ8_3;   break;
             default:
                 {
                     LLAMA_LOG_WARN("%s: unknown type %s\n", __func__, ggml_type_name(type_max));

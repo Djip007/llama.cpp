@@ -12,6 +12,8 @@ function(ggml_add_cpu_backend_variant_impl tag_name)
         ggml-cpu/ggml-cpu.cpp
         ggml-cpu/ggml-cpu-aarch64.cpp
         ggml-cpu/ggml-cpu-aarch64.h
+        ggml-cpu/ggml-cpu-fp8.cpp
+        ggml-cpu/ggml-cpu-fp8.h
         ggml-cpu/ggml-cpu-hbm.cpp
         ggml-cpu/ggml-cpu-hbm.h
         ggml-cpu/ggml-cpu-quants.c
@@ -61,6 +63,18 @@ function(ggml_add_cpu_backend_variant_impl tag_name)
             target_link_libraries(${GGML_CPU_NAME} PRIVATE OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
         else()
             message(WARNING "OpenMP not found")
+        endif()
+    endif()
+
+    if (GGML_OPENMP_SIMD)
+        check_cxx_compiler_flag("-fopenmp-simd" SUPPORTS_OPENMP_SIMD)
+        if (SUPPORTS_OPENMP_SIMD)
+            # OpenMP_RUNTIME_MSVC=experimental / if (MSVC)
+            message(STATUS "Using OPENMP_SIMD.")
+            add_compile_definitions(GGML_USE_OPENMP_SIMD)
+            set(OPENMP_SIMD_FLAGS -fopenmp-simd)
+        else()
+            message(WARNING "C++ compiler lacks OPENMP_SIMD support.")
         endif()
     endif()
 
@@ -373,6 +387,17 @@ function(ggml_add_cpu_backend_variant_impl tag_name)
         message(STATUS "Unknown architecture")
     endif()
 
+    if (GGML_CPU_TINYBLIS)
+        target_compile_definitions(${GGML_CPU_NAME} PRIVATE GGML_USE_CPU_TINYBLIS)
+        
+        list(APPEND GGML_CPU_SOURCES
+            ggml-cpu/tinyblis/tinyblis.cpp
+            ggml-cpu/kleidiai/tinyblis.h
+            ggml-cpu/kleidiai/traits.h
+            # ggml-cpu/kleidiai/kernels.cpp
+            )
+    endif()
+
     if (GGML_CPU_AARCH64)
         target_compile_definitions(${GGML_CPU_NAME} PRIVATE GGML_USE_CPU_AARCH64)
     endif()
@@ -499,4 +524,10 @@ function(ggml_add_cpu_backend_variant_impl tag_name)
     if (EMSCRIPTEN)
         set_target_properties(${GGML_CPU_NAME} PROPERTIES COMPILE_FLAGS "-msimd128")
     endif()
+
+    # FP8
+    if (OPENMP_SIMD_FLAGS)
+        set_target_properties(${GGML_CPU_NAME} PROPERTIES COMPILE_FLAGS ${OPENMP_SIMD_FLAGS})
+    endif()
+
 endfunction()
