@@ -144,13 +144,17 @@ class ModelBase:
         if self.ftype == gguf.LlamaFileType.GUESSED:
             # NOTE: can't use field "torch_dtype" in config.json, because some finetunes lie.
             _, first_tensor = next(self.get_tensors())
-            if first_tensor.dtype == torch.float16:
+            if first_tensor.dtype == torch.float32:
+                logger.info(f"choosing --outtype f32 from first tensor type ({first_tensor.dtype})")
+                self.ftype = gguf.LlamaFileType.ALL_F32
+            elif first_tensor.dtype == torch.float16:
                 logger.info(f"choosing --outtype f16 from first tensor type ({first_tensor.dtype})")
                 self.ftype = gguf.LlamaFileType.MOSTLY_F16
-            else:
+            elif first_tensor.dtype == torch.bfloat16:
                 logger.info(f"choosing --outtype bf16 from first tensor type ({first_tensor.dtype})")
                 self.ftype = gguf.LlamaFileType.MOSTLY_BF16
-
+            else:
+                raise TypeError(f"can't guessed tensor type: first tensor type ({first_tensor.dtype})")
         # Configure GGUF Writer
         self.gguf_writer = gguf.GGUFWriter(path=None, arch=gguf.MODEL_ARCH_NAMES[self.model_arch], endianess=self.endianess, use_temp_file=self.use_temp_file,
                                            split_max_tensors=split_max_tensors, split_max_size=split_max_size, dry_run=dry_run, small_first_shard=small_first_shard)
