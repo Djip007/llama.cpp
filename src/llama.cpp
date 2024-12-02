@@ -102,20 +102,24 @@ static int llama_model_load(const std::string & fname, std::vector<std::string> 
         try {
             model.load_arch(ml);
         } catch(const std::exception & e) {
-            throw std::runtime_error("error loading model architecture: " + std::string(e.what()));
+            throw std::runtime_error("architecture: " + std::string(e.what()));
         }
         try {
             model.load_hparams(ml);
         } catch(const std::exception & e) {
-            throw std::runtime_error("error loading model hyperparameters: " + std::string(e.what()));
+            throw std::runtime_error("hyperparameters: " + std::string(e.what()));
         }
         try {
             model.load_vocab(ml);
         } catch(const std::exception & e) {
-            throw std::runtime_error("error loading model vocabulary: " + std::string(e.what()));
+            throw std::runtime_error("vocabulary: " + std::string(e.what()));
         }
 
-        model.load_stats(ml);
+        try {
+            model.load_stats(ml);
+        } catch(const std::exception & e) {
+            throw std::runtime_error("stats: " + std::string(e.what()));
+        }
         model.print_info();
 
         if (params.vocab_only) {
@@ -123,9 +127,14 @@ static int llama_model_load(const std::string & fname, std::vector<std::string> 
             return 0;
         }
 
-        if (!model.load_tensors(ml)) {
-            return -2;
+        try {
+            if (!model.load_tensors(ml)) {
+                return -2;
+            }
+        } catch(const std::exception & e) {
+            throw std::runtime_error("tensors: " + std::string(e.what()));
         }
+
     } catch (const std::exception & err) {
         LLAMA_LOG_ERROR("%s: error loading model: %s\n", __func__, err.what());
         return -1;

@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <memory>
 #include <vector>
+#include <cstdint>
 
 struct llama_file;
 struct llama_mmap;
