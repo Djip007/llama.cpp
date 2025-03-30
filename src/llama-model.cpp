@@ -312,6 +312,9 @@ static ggml_backend_buffer_type_t select_weight_buft(const llama_hparams & hpara
 static buft_list_t make_cpu_buft_list(const std::vector<ggml_backend_dev_t> & devices, bool use_extra_bufts) {
     buft_list_t buft_list;
 
+    // add extra ACCEL/GPU buffer types ???
+    // TODO: ajouter les extra_buffers
+
     // add ACCEL buffer types
     for (size_t i = 0; i < ggml_backend_dev_count(); ++i) {
         ggml_backend_dev_t dev = ggml_backend_dev_get(i);
