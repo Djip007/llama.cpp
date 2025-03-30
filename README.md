@@ -1,3 +1,135 @@
+# experimental support of Ryzen 7x40 (Linux)
+in my case a 7940HS with 64Go of RAM.with fedora:41/rocm-hip:6.2.1
+
+The backend only add mulmat(bf16) support OP with hip (no use for rocblas.) There is no limit on RAM usage (GTT/VRAM) weight are allocate on RAM.
+
+If you want to test:
+
+```sh
+# build:
+rm -rf build/igpu
+cmake -S . -B build/igpu -DGGML_IGPU=ON -DAMDGPU_TARGETS=gfx1103 -DCMAKE_BUILD_TYPE=Release
+cmake --build build/igpu --config Release -- -j 8
+
+# run: (please use -ngl 999 --no-mmap -ctk bf16 -ctv bf16 for the best)
+build/igpu/bin/llama-cli --color -ngl 999 --no-mmap -ctk bf16 -ctv bf16 -m Meta-Llama-3.1-8B-Instruct.BF16.gguf
+```
+
+to be fare there is some aleatory crache with 'MES' error, may need some correction on AMD firmware
+
+01/03/2025: 1er version of kernel (V1)  (support only BF16 quantisation)
+14/03/2025: create a new kernel (V2)    (support only BF16 quantisation)
+
+Note: V2 kernel have a special kernel for gemv (ie token generation)
+Next:
+  - adapte V1 kernel for small prompt processing (2-32?)
+  - create kernel for FP8 and support optional conversion of weight (FP16/BF16/FP32) to BFP on load.
+  - Add FP16 quantisation support
+  - create true block kernel for CPU ("blis" like)?
+
+Some result (when it not crash):
+
+## Llama-3.2-1B-Instruct/BF16.gguf 
+| model           |       size |   params | type_k | type_v |  test |    CPU |    V1   |     V2  |     V4  |  Vulkan |
+| --------------- | ---------: | -------: | -----: | -----: | ----: | -----: | ------: | ------: | ------: | ------: |
+| llama 1B BF16   |   2.30 GiB |   1.24 B |   bf16 |   bf16 |   pp1 |  23.26 |   18.53 |   27.59 |   30.14 |   30.99 |
+| llama 1B BF16   |   2.30 GiB |   1.24 B |   bf16 |   bf16 |   pp2 |  45.39 |   36.20 |   34.22 |   57.68 |   60.76 |
+| llama 1B BF16   |   2.30 GiB |   1.24 B |   bf16 |   bf16 |   pp4 |  90.47 |   71.78 |   65.12 |  111.07 |  117.07 |
+| llama 1B BF16   |   2.30 GiB |   1.24 B |   bf16 |   bf16 |   pp8 | 176.86 |  139.26 |  119.79 |  200.94 |  229.28 |
+| llama 1B BF16   |   2.30 GiB |   1.24 B |   bf16 |   bf16 |  pp16 | 344.33 |  266.42 |  200.51 |  315.39 |  196.28 |
+| llama 1B BF16   |   2.30 GiB |   1.24 B |   bf16 |   bf16 |  pp32 | 562.30 |  422.50 |  429.52 |  423.95 |  366.10 |
+| llama 1B BF16   |   2.30 GiB |   1.24 B |   bf16 |   bf16 |  pp48 | 665.70 |  653.25 |  601.83 |  597.82 |  594.74 |
+| llama 1B BF16   |   2.30 GiB |   1.24 B |   bf16 |   bf16 |  pp64 | 679.13 |  717.96 |  760.94 |  764.79 |  744.75 |
+| llama 1B BF16   |   2.30 GiB |   1.24 B |   bf16 |   bf16 | pp128 | 723.15 |  990.37 | 1062.69 | 1061.43 | 1007.61 |
+| llama 1B BF16   |   2.30 GiB |   1.24 B |   bf16 |   bf16 | pp192 | 738.65 | 1131.50 | 1304.20 | 1298.02 | 1054.13 |
+| llama 1B BF16   |   2.30 GiB |   1.24 B |   bf16 |   bf16 | pp256 | 746.87 | 1151.29 | 1326.96 | 1329.72 | 1153.88 |
+| llama 1B BF16   |   2.30 GiB |   1.24 B |   bf16 |   bf16 | pp384 | 714.54 | 1178.65 | 1220.25 | 1197.43 | 1238.02 |
+| llama 1B BF16   |   2.30 GiB |   1.24 B |   bf16 |   bf16 | pp512 | 677.09 |  963.16 |  950.69 |  946.85 | 1207.43 |
+| llama 1B BF16   |   2.30 GiB |   1.24 B |   bf16 |   bf16 | pp768 | 665.30 |  901.93 |  884.07 |  874.94 | 1162.78 |
+| llama 1B BF16   |   2.30 GiB |   1.24 B |   bf16 |   bf16 |  tg16 |  23.00 |   18.26 |   27.69 |   30.13 |   31.17 |
+
+
+## Llama-3.2-3B-Instruct/BF16.gguf
+| model           |       size |   params | type_k | type_v |  test |    CPU |   V1   |    V2  |    V4  | Vulkan |
+| --------------- | ---------: | -------: | -----: | -----: | ----: | -----: | -----: | -----: | -----: | -----: |
+| llama 3B BF16   |   5.98 GiB |   3.21 B |   bf16 |   bf16 |   pp1 |   8.94 |   7.85 |  11.03 |  11.84 |  12.07 |
+| llama 3B BF16   |   5.98 GiB |   3.21 B |   bf16 |   bf16 |   pp2 |  17.56 |  15.67 |  14.61 |  23.08 |  23.67 |
+| llama 3B BF16   |   5.98 GiB |   3.21 B |   bf16 |   bf16 |   pp4 |  35.02 |  31.11 |  27.86 |  44.61 |  44.96 |
+| llama 3B BF16   |   5.98 GiB |   3.21 B |   bf16 |   bf16 |   pp8 |  69.18 |  61.01 |  51.21 |  82.57 |  90.41 |
+| llama 3B BF16   |   5.98 GiB |   3.21 B |   bf16 |   bf16 |  pp16 | 131.72 | 117.77 |  86.80 | 135.50 |  78.39 |
+| llama 3B BF16   |   5.98 GiB |   3.21 B |   bf16 |   bf16 |  pp32 | 209.28 | 185.05 | 178.08 | 176.60 | 142.46 |
+| llama 3B BF16   |   5.98 GiB |   3.21 B |   bf16 |   bf16 |  pp48 | 232.70 | 273.60 | 249.61 | 251.45 | 196.73 |
+| llama 3B BF16   |   5.98 GiB |   3.21 B |   bf16 |   bf16 |  pp64 | 237.90 | 300.62 | 313.17 | 316.92 | 246.77 |
+| llama 3B BF16   |   5.98 GiB |   3.21 B |   bf16 |   bf16 | pp128 | 261.37 | 390.84 | 438.12 | 438.36 | 316.93 |
+| llama 3B BF16   |   5.98 GiB |   3.21 B |   bf16 |   bf16 | pp192 | 263.82 | 445.00 | 506.12 | 504.17 | 368.65 |
+| llama 3B BF16   |   5.98 GiB |   3.21 B |   bf16 |   bf16 | pp256 | 265.27 | 450.11 | 516.21 | 512.75 | 373.97 |
+| llama 3B BF16   |   5.98 GiB |   3.21 B |   bf16 |   bf16 | pp384 | 261.27 | 470.54 | 485.27 | 476.42 | 400.52 |
+| llama 3B BF16   |   5.98 GiB |   3.21 B |   bf16 |   bf16 | pp512 | 254.72 | 441.51 | 480.40 | 479.50 | 390.60 |
+| llama 3B BF16   |   5.98 GiB |   3.21 B |   bf16 |   bf16 | pp768 | 253.87 | 429.79 | 462.86 | 462.20 | 384.43 |
+| llama 3B BF16   |   5.98 GiB |   3.21 B |   bf16 |   bf16 |  tg16 |   8.90 |   7.85 |  11.02 |  11.88 |  12.30 |
+
+
+## Meta-Llama-3.1-8B-Instruct/BF16.gguf
+| model           |       size |   params | type_k | type_v |  test |    CPU |   V1   |    V2  |    V4  | Vulkan |
+| --------------- | ---------: | -------: | -----: | -----: | ----: | -----: | -----: | -----: | -----: | -----: |
+| llama 8B BF16   |  14.96 GiB |   8.03 B |   bf16 |   bf16 |   pp1 |   3.88 |   3.88 |   4.88 |   5.21 |   5.35 |
+| llama 8B BF16   |  14.96 GiB |   8.03 B |   bf16 |   bf16 |   pp2 |   7.59 |   7.74 |   7.40 |  10.12 |  10.60 |
+| llama 8B BF16   |  14.96 GiB |   8.03 B |   bf16 |   bf16 |   pp4 |  15.04 |  15.43 |  14.20 |  19.67 |  20.59 |
+| llama 8B BF16   |  14.96 GiB |   8.03 B |   bf16 |   bf16 |   pp8 |  29.73 |  30.23 |  26.37 |  36.74 |  40.71 |
+| llama 8B BF16   |  14.96 GiB |   8.03 B |   bf16 |   bf16 |  pp16 |  56.55 |  58.55 |  45.95 |  61.51 |  41.17 |
+| llama 8B BF16   |  14.96 GiB |   8.03 B |   bf16 |   bf16 |  pp32 |  84.81 |  91.54 |  83.38 |  81.09 |  75.68 |
+| llama 8B BF16   |  14.96 GiB |   8.03 B |   bf16 |   bf16 |  pp48 |  90.43 | 114.77 | 116.55 | 114.14 | 106.00 |
+| llama 8B BF16   |  14.96 GiB |   8.03 B |   bf16 |   bf16 |  pp64 |  85.45 | 137.17 | 139.46 | 142.46 | 132.83 |
+| llama 8B BF16   |  14.96 GiB |   8.03 B |   bf16 |   bf16 | pp128 | 103.68 | 152.59 | 195.33 | 192.79 | 150.98 |
+| llama 8B BF16   |  14.96 GiB |   8.03 B |   bf16 |   bf16 | pp192 | 107.07 | 183.30 | 215.62 | 217.06 | 159.43 |
+| llama 8B BF16   |  14.96 GiB |   8.03 B |   bf16 |   bf16 | pp256 | 107.43 | 185.74 | 235.19 | 233.90 | 164.52 |
+| llama 8B BF16   |  14.96 GiB |   8.03 B |   bf16 |   bf16 | pp384 | 106.74 | 213.56 | 230.65 | 229.00 | 168.15 |
+| llama 8B BF16   |  14.96 GiB |   8.03 B |   bf16 |   bf16 | pp512 | 104.39 | 203.01 | 232.16 | 231.73 | 167.31 |
+| llama 8B BF16   |  14.96 GiB |   8.03 B |   bf16 |   bf16 | pp768 | 104.19 | 194.98 | 225.46 | 225.09 | 165.74 |
+| llama 8B BF16   |  14.96 GiB |   8.03 B |   bf16 |   bf16 |  tg16 |   3.88 |   3.88 |   4.87 |   5.21 |   5.36 |
+
+
+## Mistral-Nemo-Instruct-2407/BF16.gguf
+| model           |       size |   params | type_k | type_v |  test |    CPU |   V1   |    V2  |    V4  | Vulkan |
+| --------------- | ---------: | -------: | -----: | -----: | ----: | -----: | -----: | -----: | -----: | -----: |
+| llama 12B BF16  |  22.81 GiB |  12.25 B |   bf16 |   bf16 |   pp1 |   2.52 |   2.76 |   3.16 |   3.39 |   3.47 |
+| llama 12B BF16  |  22.81 GiB |  12.25 B |   bf16 |   bf16 |   pp2 |   4.94 |   5.49 |   4.90 |   6.59 |   6.89 |
+| llama 12B BF16  |  22.81 GiB |  12.25 B |   bf16 |   bf16 |   pp4 |   9.82 |  10.92 |   9.42 |  12.85 |  13.38 |
+| llama 12B BF16  |  22.81 GiB |  12.25 B |   bf16 |   bf16 |   pp8 |  19.40 |  21.60 |  17.56 |  23.92 |  25.51 |
+| llama 12B BF16  |  22.81 GiB |  12.25 B |   bf16 |   bf16 |  pp16 |  36.85 |  42.03 |  30.77 |  40.88 |  12.83 |
+| llama 12B BF16  |  22.81 GiB |  12.25 B |   bf16 |   bf16 |  pp32 |  50.40 |  65.33 |  56.43 |  55.22 |  22.44 |
+| llama 12B BF16  |  22.81 GiB |  12.25 B |   bf16 |   bf16 |  pp48 |  52.77 |  77.46 |  76.93 |  75.94 |  37.75 |
+| llama 12B BF16  |  22.81 GiB |  12.25 B |   bf16 |   bf16 |  pp64 |  54.65 |  94.48 |  93.57 |  94.02 |  48.15 |
+| llama 12B BF16  |  22.81 GiB |  12.25 B |   bf16 |   bf16 | pp128 |  65.72 | 103.87 | 127.90 | 128.54 |  51.19 |
+| llama 12B BF16  |  22.81 GiB |  12.25 B |   bf16 |   bf16 | pp192 |  67.66 | 121.43 | 143.60 | 147.41 |  54.16 |
+| llama 12B BF16  |  22.81 GiB |  12.25 B |   bf16 |   bf16 | pp256 |  68.45 | 130.03 | 156.00 | 155.52 |  54.07 |
+| llama 12B BF16  |  22.81 GiB |  12.25 B |   bf16 |   bf16 | pp384 |  67.64 | 142.89 | 154.52 | 153.33 |  54.42 |
+| llama 12B BF16  |  22.81 GiB |  12.25 B |   bf16 |   bf16 | pp512 |  67.02 | 136.18 | 156.22 | 156.51 |  46.71 |
+| llama 12B BF16  |  22.81 GiB |  12.25 B |   bf16 |   bf16 | pp768 |  66.74 | 130.78 | 151.59 | 151.78 |  46.73 |
+| llama 12B BF16  |  22.81 GiB |  12.25 B |   bf16 |   bf16 |  tg16 |   2.52 |   2.76 |   3.16 |   3.39 |   3.48 |
+
+
+## Mistral-Small-24B-Instruct-2501/BF16.gguf
+| model           |       size |   params | type_k | type_v |  test |    CPU |   V1   |    V2  |     V4  |
+| --------------- | ---------: | -------: | -----: | -----: | ----: | -----: | -----: | -----: | ------: |
+| llama 24B BF16  |  43.91 GiB |  23.57 B |   bf16 |   bf16 |   pp1 |   1.28 |   1.39 |   1.64 |   1.73  |
+| llama 24B BF16  |  43.91 GiB |  23.57 B |   bf16 |   bf16 |   pp2 |   2.52 |   2.76 |   2.71 |   3.40  |
+| llama 24B BF16  |  43.91 GiB |  23.57 B |   bf16 |   bf16 |   pp4 |   5.02 |   5.50 |   5.26 |   6.63  |
+| llama 24B BF16  |  43.91 GiB |  23.57 B |   bf16 |   bf16 |   pp8 |   9.87 |  10.89 |   9.94 |  12.52  |
+| llama 24B BF16  |  43.91 GiB |  23.57 B |   bf16 |   bf16 |  pp16 |  18.32 |  21.32 |  17.86 |  22.36  |
+| llama 24B BF16  |  43.91 GiB |  23.57 B |   bf16 |   bf16 |  pp32 |  25.53 |  34.65 |  31.50 |  30.18  |
+| llama 24B BF16  |  43.91 GiB |  23.57 B |   bf16 |   bf16 |  pp48 |  24.53 |  36.05 |  43.93 |  43.43  |
+| llama 24B BF16  |  43.91 GiB |  23.57 B |   bf16 |   bf16 |  pp64 |  25.88 |  47.87 |  53.96 |  53.73  |
+| llama 24B BF16  |  43.91 GiB |  23.57 B |   bf16 |   bf16 | pp128 |  29.69 |  52.03 |  69.64 |  65.84  |
+| llama 24B BF16  |  43.91 GiB |  23.57 B |   bf16 |   bf16 | pp192 |  29.99 |  61.00 |  79.73 |  80.14  |
+| llama 24B BF16  |  43.91 GiB |  23.57 B |   bf16 |   bf16 | pp256 |  30.94 |  63.11 |  87.30 |  87.01  |
+| llama 24B BF16  |  43.91 GiB |  23.57 B |   bf16 |   bf16 | pp384 |  32.51 |  75.00 |  86.26 |    -    |
+| llama 24B BF16  |  43.91 GiB |  23.57 B |   bf16 |   bf16 | pp512 |  32.28 |  71.11 |  88.11 |    -    |
+| llama 24B BF16  |  43.91 GiB |  23.57 B |   bf16 |   bf16 | pp768 |  32.02 |  67.33 |  85.47 |    -    |
+| llama 24B BF16  |  43.91 GiB |  23.57 B |   bf16 |   bf16 |  tg16 |   1.28 |   1.38 |   1.62 |    -    |
+
+-------------------------------
+
 # llama.cpp
 
 ![llama](https://user-images.githubusercontent.com/1991296/230134379-7181e485-c521-4d23-a0d6-f7b3b61ba524.png)

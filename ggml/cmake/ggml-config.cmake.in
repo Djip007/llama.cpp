@@ -76,6 +76,11 @@ if (NOT GGML_SHARED_LIB)
         list(APPEND GGML_HIP_INTERFACE_LINK_LIBRARIES hip::host roc::rocblas roc::hipblas)
     endif()
 
+    if (GGML_IGPU)
+        find_package(hip     REQUIRED)
+        list(APPEND GGML_HIP_INTERFACE_LINK_LIBRARIES hip::host)
+    endif()
+
     if (GGML_SYCL)
         find_package(DNNL)
         if (${DNNL_FOUND} AND GGML_SYCL_TARGET STREQUAL "INTEL")

@@ -65,6 +65,10 @@
 #include "ggml-kompute.h"
 #endif
 
+#ifdef GGML_USE_IGPU
+#include "ggml-igpu.h"
+#endif
+
 // disable C++17 deprecation warning for std::codecvt_utf8
 #if defined(__clang__)
 #    pragma clang diagnostic push
@@ -160,6 +164,9 @@ struct ggml_backend_registry {
     std::vector<ggml_backend_dev_t> devices;
 
     ggml_backend_registry() {
+#ifdef GGML_USE_IGPU
+        register_backend(ggml_backend_igpu_reg());
+#endif
 #ifdef GGML_USE_CUDA
         register_backend(ggml_backend_cuda_reg());
 #endif

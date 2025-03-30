@@ -68,6 +68,8 @@ GGML_API size_t ggml_gallocr_get_buffer_size(ggml_gallocr_t galloc, int buffer_i
 
 // Utils
 // Create a buffer and allocate all the tensors in a ggml_context
+//  Y a un probleme, les tenseurs sont initialisé mais leur type n'est pas "bon"
+//  TODO: ajouter "enum ggml_backend_buffer_usage usage = GGML_BACKEND_BUFFER_USAGE_ANY" en parametre !!!
 GGML_API struct ggml_backend_buffer * ggml_backend_alloc_ctx_tensors_from_buft(struct ggml_context * ctx, ggml_backend_buffer_type_t buft);
 GGML_API struct ggml_backend_buffer * ggml_backend_alloc_ctx_tensors(struct ggml_context * ctx, ggml_backend_t backend);
 
