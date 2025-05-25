@@ -11,7 +11,8 @@
 //#define BLOC_V3
 //#define BLOC_V4  // OK N=[1-22] N=[48...]
 //#define BLOC_V5  // avec fp16 en plus ?
-#define BLOC_V6 
+//#define BLOC_V6 
+#define BLOC_V7   // laod vectorisé
 
 #ifdef BLOC_V1
 #include "mulmat-bf16bloc_V1.h"
@@ -30,4 +31,7 @@
 #endif
 #ifdef BLOC_V6
 #include "mulmat-bf16bloc_V6.h"
+#endif
+#ifdef BLOC_V7
+#include "mulmat-bf16bloc_V7.h"
 #endif
