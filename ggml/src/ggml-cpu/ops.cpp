@@ -5375,6 +5375,43 @@ static void ggml_compute_forward_clamp_f16(
     }
 }
 
+static void ggml_compute_forward_clamp_bf16(
+    const ggml_compute_params * params,
+    ggml_tensor * dst) {
+
+    const ggml_tensor * src0 = dst->src[0];
+
+    float min;
+    float max;
+    memcpy(&min, (float *) dst->op_params + 0, sizeof(float));
+    memcpy(&max, (float *) dst->op_params + 1, sizeof(float));
+
+    const int ith = params->ith;
+    const int nth = params->nth;
+
+    const int n  = ggml_nrows(src0);
+    const int nc = src0->ne[0];
+
+    const size_t nb00 = src0->nb[0];
+    const size_t nb01 = src0->nb[1];
+
+    const size_t nb0 = dst->nb[0];
+    const size_t nb1 = dst->nb[1];
+
+    GGML_ASSERT( nb0 == sizeof(ggml_bf16_t));
+    GGML_ASSERT(nb00 == sizeof(ggml_bf16_t));
+
+    for (int j = ith; j < n; j += nth) {
+        ggml_bf16_t * dst_ptr  = (ggml_bf16_t *) ((char *)  dst->data + j*nb1);
+        ggml_bf16_t * src0_ptr = (ggml_bf16_t *) ((char *) src0->data + j*nb01);
+
+        for (int i = 0; i < nc; i++) {
+            float v = GGML_BF16_TO_FP32(src0_ptr[i]);
+            dst_ptr[i] = GGML_FP32_TO_BF16(MAX(MIN(v, max), min));
+        }
+    }
+}
+
 void ggml_compute_forward_clamp(
         const ggml_compute_params * params,
         ggml_tensor * dst) {
@@ -5391,36 +5428,10 @@ void ggml_compute_forward_clamp(
                 ggml_compute_forward_clamp_f16(params, dst);
             } break;
         case GGML_TYPE_BF16:
-        case GGML_TYPE_Q4_0:
-        case GGML_TYPE_Q4_1:
-        case GGML_TYPE_Q5_0:
-        case GGML_TYPE_Q5_1:
-        case GGML_TYPE_Q8_0:
-        case GGML_TYPE_Q8_1:
-        case GGML_TYPE_MXFP4:
-        case GGML_TYPE_Q2_K:
-        case GGML_TYPE_Q3_K:
-        case GGML_TYPE_Q4_K:
-        case GGML_TYPE_Q5_K:
-        case GGML_TYPE_Q6_K:
-        case GGML_TYPE_TQ1_0:
-        case GGML_TYPE_TQ2_0:
-        case GGML_TYPE_IQ2_XXS:
-        case GGML_TYPE_IQ2_XS:
-        case GGML_TYPE_IQ3_XXS:
-        case GGML_TYPE_IQ1_S:
-        case GGML_TYPE_IQ1_M:
-        case GGML_TYPE_IQ4_NL:
-        case GGML_TYPE_IQ4_XS:
-        case GGML_TYPE_IQ3_S:
-        case GGML_TYPE_IQ2_S:
-        case GGML_TYPE_Q8_K:
-        case GGML_TYPE_I8:
-        case GGML_TYPE_I16:
-        case GGML_TYPE_I32:
-        case GGML_TYPE_I64:
-        case GGML_TYPE_F64:
-        case GGML_TYPE_COUNT:
+            {
+                ggml_compute_forward_clamp_bf16(params, dst);
+            } break;
+        default:
             {
                 GGML_ABORT("fatal error");
             }
