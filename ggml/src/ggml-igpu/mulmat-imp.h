@@ -4,6 +4,8 @@
 #include "ggml-hip.h"
 #include "tools.h"
 
+// There are also pre-defined macros which can help, e.g. __gfx906__, __gfx1030__, __GFX9__, __GFX10__
+
 // choix de la version a builer...
 
 //#define BLOC_V1    // mieux? N=[23-47]  => Voir comment faire "mieux" dans cette bande.
@@ -15,6 +17,7 @@
 //#define BLOC_V7   // load vectorisé
 //#define BLOC_V8
 #define BLOC_V9   // lood A/B separement
+//#define BLOC_V10   // Next V10 => external template config?
 
 #ifdef BLOC_V1
 #include "mulmat-bf16bloc_V1.h"
@@ -42,4 +45,7 @@
 #endif
 #ifdef BLOC_V9
 #include "mulmat-bf16bloc_V9.h"
+#endif
+#ifdef BLOC_V10
+#include "mulmat-bf16bloc_V10.h"
 #endif
