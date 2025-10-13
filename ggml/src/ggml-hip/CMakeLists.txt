@@ -42,7 +42,7 @@ find_package(rocblas REQUIRED)
 if (GGML_HIP_ROCWMMA_FATTN)
     CHECK_INCLUDE_FILE_CXX("rocwmma/rocwmma.hpp" FOUND_ROCWMMA)
     if (NOT FOUND_ROCWMMA)
-        # message(FATAL_ERROR "rocwmma has not been found")
+        message(FATAL_ERROR "rocwmma has not been found")
     endif()
 endif()
 
