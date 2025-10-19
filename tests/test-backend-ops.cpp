@@ -1811,6 +1811,11 @@ struct test_unary : public test_case {
         }
     }
 
+    double max_nmse_err() override {
+        if (type == GGML_TYPE_BF16) return 2e-6;  // SIGMOID / TANH
+        return 1e-7;
+    }
+
     float grad_eps() override {
         return 15.0f;
     }
@@ -2674,6 +2679,14 @@ struct test_bin_bcast : public test_case {
     double max_maa_err() override {
         return op == ggml_add ? 1e-4 : 1e-3;
     }
+
+    double max_nmse_err() override {
+        if (type == GGML_TYPE_BF16) { 
+            return 4e-5;
+        }
+        return 1e-7;
+    }
+
 };
 
 // GGML_OP_ADD_ID
@@ -5785,7 +5798,7 @@ static std::vector<std::unique_ptr<test_case>> make_test_cases_eval() {
     std::default_random_engine rng(0);
 
     // unary ops
-    for (ggml_type type : {GGML_TYPE_F16, GGML_TYPE_F32}) {
+    for (ggml_type type : {GGML_TYPE_F16, GGML_TYPE_F32, GGML_TYPE_BF16}) {
         for (int v : {0, 1}) {
             for (int op = 0; op < GGML_UNARY_OP_COUNT; op++) {
                 test_cases.emplace_back(new test_unary((ggml_unary_op) op, type, { 128, 2, 2, 2 }, v));
@@ -6238,7 +6251,7 @@ static std::vector<std::unique_ptr<test_case>> make_test_cases_eval() {
             test_cases.emplace_back(new test_bin_bcast(op, type, ne, nr));
         }
     };
-    for (ggml_type type : {GGML_TYPE_F16, GGML_TYPE_F32}) {
+    for (ggml_type type : {GGML_TYPE_F16, GGML_TYPE_F32, GGML_TYPE_BF16}) {
         add_test_bin_bcast(type, {1, 1, 8, 1}, {1, 1, 1, 1});
         add_test_bin_bcast(type, {1, 1, 1, 1}, {32, 1, 1, 1});
         add_test_bin_bcast(type, {1, 1, 320, 320}, {1, 1, 1, 1});

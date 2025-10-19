@@ -41,6 +41,8 @@ namespace ggml::cpp::backend {
         virtual std::size_t get_max_size() { return SIZE_MAX; }
         virtual std::size_t get_alloc_size(const ggml_tensor& tensor) { return ggml_nbytes(&tensor); }
         virtual bool is_host() { return false; }
+        // pour ceux qui le supportent un buffer a partir d'une pointer memoire:
+        virtual buffer* register_buffer(void * /*ptr*/, std::size_t /*size*/, std::size_t /*max_tensor_size*/) { return nullptr; }
     };
 
     class event {
@@ -99,7 +101,6 @@ namespace ggml::cpp::backend {
         virtual buffer_type*               get_host_buffer_type() { return nullptr; }
         // => caps_buffer_from_host_ptr() { return true; }
         virtual buffer_type*               get_from_host_ptr_buffer_type() { return nullptr; }
-        virtual buffer*                    buffer_from_host_ptr(void * /*ptr*/, std::size_t /*size*/, std::size_t /*max_tensor_size*/) { return nullptr; }
         virtual bool                       supports_op(const ggml_tensor & op) = 0;
         virtual bool                       supports_buft(ggml_backend_buffer_type_t buft) = 0;
         virtual bool                       offload_op(const ggml_tensor & /*op*/) { return false; }
@@ -114,7 +115,6 @@ namespace ggml::cpp::backend {
         virtual bool caps_buffer_from_host_ptr() { return false; }
         virtual bool caps_events()               { return false; }
 
-        virtual void release() {} // call when backend is delete
     };
 
     class reg {

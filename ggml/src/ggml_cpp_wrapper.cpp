@@ -170,7 +170,7 @@ namespace ggml::cpp::backend {
         auto& ctx = *((ggml::cpp::backend::device*) (dev->context));
         auto* bft = ctx.get_from_host_ptr_buffer_type();
         if (!bft) { return nullptr; }
-        auto* buf = ctx.buffer_from_host_ptr(ptr, size, max_tensor_size);
+        auto* buf = bft->register_buffer(ptr, size, max_tensor_size);
         if (!buf) { return nullptr; }
         // comment / ou memoriser ce wrapper, il n'y a pas de "delete"
         auto * ggml_buf_type = c_wrapper(dev, bft);
@@ -236,7 +236,7 @@ namespace ggml::cpp::backend {
     buffer_type::~buffer_type() {}
     event::~event() {}
     backend::backend(device& dev): m_device(dev) {}
-    backend::~backend() { m_device.release(); }
+    backend::~backend() { }
     device::~device() {}
     reg::~reg() {}
 
@@ -317,7 +317,8 @@ namespace ggml::cpp::backend {
                 /* .graph_plan_compute = */ nullptr,
                 /* .graph_compute      = */ backend_graph_compute,
                 /* .event_record       = */ dev.caps_events() ? backend_event_record : nullptr,
-                /* .event_wait         = */ dev.caps_events() ? backend_event_wait : nullptr
+                /* .event_wait         = */ dev.caps_events() ? backend_event_wait : nullptr,
+                /* .graph_optimize     = */ nullptr, // TODO: pour fusion...etc 
             },
             /* .device  = */ device,
             /* .context = */ ctx

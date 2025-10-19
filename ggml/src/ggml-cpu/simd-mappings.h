@@ -137,6 +137,14 @@ inline static float ggml_lookup_fp16_to_fp32(ggml_fp16_t f) {
 #define GGML_CPU_FP32_TO_FP16(x) GGML_COMPUTE_FP32_TO_FP16(x)
 #endif
 
+#if !defined(GGML_CPU_BF16_TO_FP32)
+#define GGML_CPU_BF16_TO_FP32(x) GGML_COMPUTE_BF16_TO_FP32(x)
+#endif
+
+#if !defined(GGML_CPU_FP32_TO_BF16)
+#define GGML_CPU_FP32_TO_BF16(x) GGML_COMPUTE_FP32_TO_BF16(x)
+#endif
+
 
 // we define a common set of C macros which map to specific intrinsics based on the current architecture
 // we then implement the fundamental computation operations below using only these macros

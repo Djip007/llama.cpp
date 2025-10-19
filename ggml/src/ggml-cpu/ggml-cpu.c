@@ -74,6 +74,7 @@
 
 // precomputed f32 table for f16 (256 KB) (simd-mappings.h)
 float ggml_table_f32_f16[1 << 16];
+float ggml_table_f32_bf16[1 << 16];
 
 #if defined(__ARM_ARCH)
 struct ggml_arm_arch_features_type {
@@ -3554,6 +3555,17 @@ void ggml_cpu_init(void) {
                 ggml_table_f32_f16[i] = f;
                 ggml_table_gelu_f16[i] = GGML_CPU_FP32_TO_FP16(ggml_gelu_f32(f));
                 ggml_table_gelu_quick_f16[i] = GGML_CPU_FP32_TO_FP16(ggml_gelu_quick_f32(f));
+            }
+
+            for (int i = 0; i < (1 << 16); ++i) {
+                union {
+                    uint16_t u16;
+                    ggml_bf16_t bf16;
+                } u = {i};
+                float f = GGML_COMPUTE_BF16_TO_FP32(u.bf16);
+                ggml_table_f32_bf16[i] = f;
+                ggml_table_gelu_bf16[i] = GGML_CPU_FP32_TO_BF16(ggml_gelu_f32(f));
+                ggml_table_gelu_quick_bf16[i] = GGML_CPU_FP32_TO_BF16(ggml_gelu_quick_f32(f));
             }
 
             const uint64_t t_end = ggml_time_us(); UNUSED(t_end);

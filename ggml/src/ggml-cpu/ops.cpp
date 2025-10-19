@@ -2118,6 +2118,46 @@ static void ggml_compute_forward_gelu_f16(
     }
 }
 
+static void ggml_compute_forward_gelu_bf16(
+    const ggml_compute_params * params,
+    ggml_tensor * dst) {
+
+    const ggml_tensor * src0 = dst->src[0];
+
+    assert(ggml_is_contiguous_1(src0));
+    assert(ggml_is_contiguous_1(dst));
+    assert(ggml_are_same_shape(src0, dst));
+
+    const int ith = params->ith;
+    const int nth = params->nth;
+
+    const int nc = src0->ne[0];
+    const int nr = ggml_nrows(src0);
+
+    // rows per thread
+    const int dr = (nr + nth - 1)/nth;
+
+    // row range for this thread
+    const int ir0 = dr*ith;
+    const int ir1 = MIN(ir0 + dr, nr);
+
+    for (int i1 = ir0; i1 < ir1; i1++) {
+        ggml_vec_gelu_bf16(nc,
+                (ggml_bf16_t *) ((char *) dst->data  + i1*( dst->nb[1])),
+                (ggml_bf16_t *) ((char *) src0->data + i1*(src0->nb[1])));
+
+#ifndef NDEBUG
+        for (int k = 0; k < nc; k++) {
+            const ggml_bf16_t x = ((ggml_bf16_t *) ((char *) dst->data + i1*( dst->nb[1])))[k];
+            const float v = GGML_CPU_BF16_TO_FP32(x);
+            GGML_UNUSED(v);
+            assert(!isnan(v));
+            assert(!isinf(v));
+        }
+#endif
+    }
+}
+
 static void ggml_compute_forward_gelu(
         const ggml_compute_params * params,
         ggml_tensor * dst) {
@@ -2132,6 +2172,10 @@ static void ggml_compute_forward_gelu(
         case GGML_TYPE_F16:
             {
                 ggml_compute_forward_gelu_f16(params, dst);
+            } break;
+        case GGML_TYPE_BF16:
+            {
+                ggml_compute_forward_gelu_bf16(params, dst);
             } break;
         default:
             {
@@ -2221,6 +2265,46 @@ static void ggml_compute_forward_gelu_erf_f16(
     }
 }
 
+static void ggml_compute_forward_gelu_erf_bf16(
+    const ggml_compute_params * params,
+    ggml_tensor * dst) {
+
+    const ggml_tensor * src0 = dst->src[0];
+
+    assert(ggml_is_contiguous_1(src0));
+    assert(ggml_is_contiguous_1(dst));
+    assert(ggml_are_same_shape(src0, dst));
+
+    const int ith = params->ith;
+    const int nth = params->nth;
+
+    const int nc = src0->ne[0];
+    const int nr = ggml_nrows(src0);
+
+    // rows per thread
+    const int dr = (nr + nth - 1)/nth;
+
+    // row range for this thread
+    const int ir0 = dr*ith;
+    const int ir1 = MIN(ir0 + dr, nr);
+
+    for (int i1 = ir0; i1 < ir1; i1++) {
+        ggml_vec_gelu_erf_bf16(nc,
+                (ggml_bf16_t *) ((char *) dst->data  + i1*( dst->nb[1])),
+                (ggml_bf16_t *) ((char *) src0->data + i1*(src0->nb[1])));
+
+#ifndef NDEBUG
+        for (int k = 0; k < nc; k++) {
+            const ggml_bf16_t x = ((ggml_bf16_t *) ((char *) dst->data + i1*( dst->nb[1])))[k];
+            const float v = GGML_CPU_BF16_TO_FP32(x);
+            GGML_UNUSED(v);
+            assert(!isnan(v));
+            assert(!isinf(v));
+        }
+#endif
+    }
+}
+
 static void ggml_compute_forward_gelu_erf(
         const ggml_compute_params * params,
         ggml_tensor * dst) {
@@ -2235,6 +2319,10 @@ static void ggml_compute_forward_gelu_erf(
         case GGML_TYPE_F16:
             {
                 ggml_compute_forward_gelu_erf_f16(params, dst);
+            } break;
+        case GGML_TYPE_BF16:
+            {
+                ggml_compute_forward_gelu_erf_bf16(params, dst);
             } break;
         default:
             {
@@ -2324,6 +2412,46 @@ static void ggml_compute_forward_gelu_quick_f16(
     }
 }
 
+static void ggml_compute_forward_gelu_quick_bf16(
+    const ggml_compute_params * params,
+    ggml_tensor * dst) {
+
+    const ggml_tensor * src0 = dst->src[0];
+
+    assert(ggml_is_contiguous_1(src0));
+    assert(ggml_is_contiguous_1(dst));
+    assert(ggml_are_same_shape(src0, dst));
+
+    const int ith = params->ith;
+    const int nth = params->nth;
+
+    const int nc = src0->ne[0];
+    const int nr = ggml_nrows(src0);
+
+    // rows per thread
+    const int dr = (nr + nth - 1)/nth;
+
+    // row range for this thread
+    const int ir0 = dr*ith;
+    const int ir1 = MIN(ir0 + dr, nr);
+
+    for (int i1 = ir0; i1 < ir1; i1++) {
+        ggml_vec_gelu_quick_bf16(nc,
+                (ggml_bf16_t *) ((char *) dst->data  + i1*( dst->nb[1])),
+                (ggml_bf16_t *) ((char *) src0->data + i1*(src0->nb[1])));
+
+#ifndef NDEBUG
+        for (int k = 0; k < nc; k++) {
+            const ggml_bf16_t x = ((ggml_bf16_t *) ((char *) dst->data + i1*( dst->nb[1])))[k];
+            const float v = GGML_CPU_BF16_TO_FP32(x);
+            GGML_UNUSED(v);
+            assert(!isnan(v));
+            assert(!isinf(v));
+        }
+#endif
+    }
+}
+
 static void ggml_compute_forward_gelu_quick(
         const ggml_compute_params * params,
         ggml_tensor * dst) {
@@ -2338,6 +2466,10 @@ static void ggml_compute_forward_gelu_quick(
         case GGML_TYPE_F16:
             {
                 ggml_compute_forward_gelu_quick_f16(params, dst);
+            } break;
+        case GGML_TYPE_BF16:
+            {
+                ggml_compute_forward_gelu_quick_bf16(params, dst);
             } break;
         default:
             {
@@ -2427,6 +2559,46 @@ static void ggml_compute_forward_silu_f16(
     }
 }
 
+static void ggml_compute_forward_silu_bf16(
+    const ggml_compute_params * params,
+    ggml_tensor * dst) {
+
+    const ggml_tensor * src0 = dst->src[0];
+
+    assert(ggml_is_contiguous_1(src0));
+    assert(ggml_is_contiguous_1(dst));
+    assert(ggml_are_same_shape(src0, dst));
+
+    const int ith = params->ith;
+    const int nth = params->nth;
+
+    const int nc = src0->ne[0];
+    const int nr = ggml_nrows(src0);
+
+    // rows per thread
+    const int dr = (nr + nth - 1)/nth;
+
+    // row range for this thread
+    const int ir0 = dr*ith;
+    const int ir1 = MIN(ir0 + dr, nr);
+
+    for (int i1 = ir0; i1 < ir1; i1++) {
+        ggml_vec_silu_bf16(nc,
+                (ggml_bf16_t *) ((char *) dst->data  + i1*( dst->nb[1])),
+                (ggml_bf16_t *) ((char *) src0->data + i1*(src0->nb[1])));
+
+#ifndef NDEBUG
+        for (int k = 0; k < nc; k++) {
+            const ggml_bf16_t x = ((ggml_bf16_t *) ((char *) dst->data + i1*(dst->nb[1])))[k];
+            const float v = GGML_CPU_BF16_TO_FP32(x);
+            GGML_UNUSED(v);
+            assert(!isnan(v));
+            assert(!isinf(v));
+        }
+#endif
+    }
+}
+
 static void ggml_compute_forward_silu(
         const ggml_compute_params * params,
         ggml_tensor * dst) {
@@ -2441,6 +2613,10 @@ static void ggml_compute_forward_silu(
         case GGML_TYPE_F16:
             {
                 ggml_compute_forward_silu_f16(params, dst);
+            } break;
+        case GGML_TYPE_BF16:
+            {
+                ggml_compute_forward_silu_bf16(params, dst);
             } break;
         default:
             {

@@ -394,6 +394,9 @@ static inline ggml_fp16_t ggml_compute_fp32_to_fp16(float f) {
 #define GGML_COMPUTE_FP16_TO_FP32(x) ggml_compute_fp16_to_fp32(x)
 #define GGML_COMPUTE_FP32_TO_FP16(x) ggml_compute_fp32_to_fp16(x)
 
+#define GGML_COMPUTE_BF16_TO_FP32(x) ggml_compute_bf16_to_fp32(x)
+#define GGML_COMPUTE_FP32_TO_BF16(x) ggml_compute_fp32_to_bf16(x)
+
 #define GGML_FP16_TO_FP32(x) GGML_COMPUTE_FP16_TO_FP32(x)
 #define GGML_FP32_TO_FP16(x) GGML_COMPUTE_FP32_TO_FP16(x)
 

@@ -190,6 +190,8 @@ set(GGML_BLAS_VENDOR ${GGML_BLAS_VENDOR_DEFAULT} CACHE STRING
                                             "ggml: BLAS library vendor")
 option(GGML_LLAMAFILE                       "ggml: use LLAMAFILE"                             ${GGML_LLAMAFILE_DEFAULT})
 
+option(GGML_IGPU                            "ggml: use IGPU"                                  OFF)
+
 option(GGML_CUDA                            "ggml: use CUDA"                                  OFF)
 option(GGML_MUSA                            "ggml: use MUSA"                                  OFF)
 option(GGML_CUDA_FORCE_MMQ                  "ggml: use mmq kernels instead of cuBLAS"         OFF)
@@ -309,6 +311,7 @@ set(GGML_PUBLIC_HEADERS
     include/ggml-cann.h
     include/ggml-cpp.h
     include/ggml-cuda.h
+    include/ggml-igpu.h
     include/ggml-opt.h
     include/ggml-metal.h
     include/ggml-rpc.h
