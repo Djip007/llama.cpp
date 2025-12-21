@@ -1497,6 +1497,13 @@ struct test_case {
             mem += tensor_op_size(ggml_graph_node(gf, i));
         }
 
+        // warmup run full graph
+        status = ggml_backend_graph_compute(backend, gf);
+        if (status != GGML_STATUS_SUCCESS) {
+            fprintf(stderr, "%s: ggml_backend_graph_compute failed. status=%s \n", __func__, ggml_status_to_string(status));
+            return false;
+        }
+
         // run
         int64_t total_time_us = 0;
         int64_t total_mem = 0;
@@ -8101,7 +8108,7 @@ static std::vector<std::unique_ptr<test_case>> make_test_cases_perf() {
     test_cases.emplace_back(new test_cumsum(GGML_TYPE_F32, { 2048, 16, 5, 4 }));
     test_cases.emplace_back(new test_cumsum(GGML_TYPE_F32, { 20000, 10, 4, 1 }));
 
-    for (int bs : {1, 2, 3, 4, 5, 8, 512}) {
+    for (int bs : {1, 2, 3, 4, 5, 8, 16, 32, 64, 128, 256, 512}) {
         for (ggml_type type_a : all_types) {
             for (ggml_type type_b : {GGML_TYPE_F32}) {
                 test_cases.emplace_back(new test_mul_mat(type_a, type_b, 4096, bs, 14336, {1,  1}, {1, 1}));

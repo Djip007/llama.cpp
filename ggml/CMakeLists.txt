@@ -187,6 +187,10 @@ option(GGML_SCHED_NO_REALLOC                "ggml: disallow reallocations in ggm
 
 # 3rd party libs / backends
 option(GGML_ACCELERATE                      "ggml: enable Accelerate framework"               ON)
+
+option(GGML_AOCL                            "ggml: use aocl-dlp"                             OFF)
+#option(GGML_AOCL_ROOT                       "ggml: path to aocl-dlp installation"             "")
+
 option(GGML_BLAS                            "ggml: use BLAS"                                  ${GGML_BLAS_DEFAULT})
 set(GGML_BLAS_VENDOR ${GGML_BLAS_VENDOR_DEFAULT} CACHE STRING
                                             "ggml: BLAS library vendor")
@@ -311,6 +315,7 @@ set(GGML_PUBLIC_HEADERS
     include/ggml.h
     include/ggml-cpu.h
     include/ggml-alloc.h
+    include/ggml-aocl.h
     include/ggml-backend.h
     include/ggml-blas.h
     include/ggml-cann.h

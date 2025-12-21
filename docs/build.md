@@ -459,6 +459,7 @@ cmake --build build --config Release
 ```
 
 Finally, after finishing your build, you should be able to do something like this:
+
 ```bash
 # Test the output binary
 # "-ngl 99" should offload all of the layers to GPU for most (if not all) models.
@@ -526,6 +527,133 @@ You can test with:
 ```
 
 For detailed information about hardware support, setup instructions, and performance optimization, refer to [llama.cpp for ZenDNN](./backend/ZenDNN.md).
+
+## AOCL-dlp
+AOCL provides optimized deep learning primitives for Zen4/Zen5 CPU. It accelerates matrix multiplication operations for inference workloads.
+It is only for FP32 or BF16 quantized models.
+
+### Compilation
+#### Option 1 Use Custom Installation
+
+```bash
+# git clone:
+git clone https://github.com/amd/aocl-dlp.git
+cd aocl-dlp
+
+# aocl build
+export AOCL_BUILD_PATH=build
+export AOCL_INSTALL_PATH=install
+
+cmake -S . -B ${AOCL_BUILD_PATH} -DCMAKE_BUILD_TYPE=Release \
+ -DDLP_THREADING_MODEL=openmp \
+ -DCMAKE_INSTALL_PREFIX=${AOCL_INSTALL_PATH}
+
+cmake --build ${AOCL_BUILD_PATH} --config release -- -j 8
+cmake --build ${AOCL_BUILD_PATH} --config release --target install
+
+# llama.cpp build
+cd ../llama.cpp
+rm -rf build
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DGGML_AOCL=ON -DCMAKE_PREFIX_PATH="${AOCL_INSTALL_PATH}"
+cmake --build build --config Release -- -j 8
+
+```
+
+#### Option 2 Automatic Download and Build (not working)
+build is in place but AOCL did not work for now [issues_7](https://github.com/amd/aocl-dlp/issues/7)
+
+### Testing
+
+You can test with:
+
+```bash
+# config OpenMP (depend on CPU) [Performance-Guide](https://github.com/amd/aocl-dlp/wiki/Performance-Guide)
+# for zen5 16 core (Ryzen™ AI Max+ 395)
+export OMP_WAIT_POLICY=active
+export OMP_NUM_THREADS=16
+export GOMP_CPU_AFFINITY="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15"
+# for zen4 8 core (Ryzen™ 7940HS)
+export OMP_WAIT_POLICY=active
+export OMP_NUM_THREADS=8
+export GOMP_CPU_AFFINITY="1,3,5,7,9,11,13,15"
+
+# use repacking so use --no_mmap for best memory management.
+numactl --cpunodebind=0 --membind=0 \
+  ./build/bin/llama-cli -ctk bf16 -ctv bf16 -ub 512 --no_mmap \
+    -m PATH_TO_MODEL -p "Building a website can be done in 10 steps:" -n 50
+```
+
+### Result
+- Ryzen™ 7940HS
+
+u_batch = 768/512/1024?
+kv_type = BF16
+thread  = 16
+mmap    = 0
+
+| model                          |       size |     params | threads |            test |       AOCL       t/s |           CPU    t/s |
+| ------------------------------ | ---------: | ---------: | ------: | --------------: | -------------------: | -------------------: |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |       8 |          pp1024 |        118.64 ± 0.15 |         95.14 ± 0.04 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |       8 |             pp1 |          3.79 ± 0.02 |          3.87 ± 0.00 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |       8 |             pp2 |          7.64 ± 0.04 |          7.49 ± 0.00 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |       8 |             pp3 |         11.35 ± 0.02 |         11.14 ± 0.04 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |       8 |             pp4 |         15.08 ± 0.02 |         14.75 ± 0.05 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |       8 |             pp8 |         29.67 ± 0.15 |         28.86 ± 0.10 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |       8 |            pp12 |         42.51 ± 0.17 |         42.12 ± 0.12 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |       8 |            pp16 |         53.32 ± 0.22 |         54.42 ± 0.17 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |       8 |            pp24 |         68.29 ± 0.36 |         70.10 ± 0.25 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |       8 |            pp32 |         80.27 ± 0.25 |         77.06 ± 0.32 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |       8 |            pp48 |         94.46 ± 0.12 |         90.56 ± 0.04 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |       8 |            pp64 |         93.54 ± 0.40 |         89.01 ± 0.25 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |       8 |            pp96 |        106.53 ± 0.14 |         95.11 ± 0.11 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |       8 |           pp128 |        109.35 ± 0.41 |         95.86 ± 0.01 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |       8 |           pp192 |        113.91 ± 0.20 |         97.44 ± 0.05 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |       8 |           pp256 |        118.58 ± 0.24 |         98.08 ± 0.01 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |       8 |           pp384 |        119.34 ± 0.25 |         97.40 ± 0.04 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |       8 |           pp512 |        119.96 ± 0.10 |         96.90 ± 0.00 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |       8 |           pp768 |        119.09 ± 0.18 |         95.98 ± 0.03 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |       8 |          pp1024 |        118.28 ± 0.05 |         95.18 ± 0.05 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |       8 |          pp1536 |        116.37 ± 0.07 |         92.05 ± 0.03 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |       8 |          pp2048 |        113.96 ± 0.02 |         89.77 ± 0.02 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |       8 |          pp3072 |        109.67 ± 0.19 |         86.26 ± 1.19 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |       8 |          pp4096 |        105.98 ± 0.01 |         83.87 ± 0.01 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |       8 |          pp8192 |         91.53 ± 0.47 |         71.04 ± 0.01 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |       8 |            tg16 |          3.79 ± 0.01 |          3.87 ± 0.00 |
+
+u_batch = 768
+kv_type = BF16
+thread  = 16
+mmap    = 0
+
+| model                          |       size |     params |            test |        AOCL-dlp  t/s |         ZenDNN   t/s |                  t/s |
+| ------------------------------ | ---------: | ---------: | --------------: | -------------------: | -------------------: | -------------------: |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |             pp1 |          7.33 ± 0.00 |          7.18 ± 0.00 |          7.72 ± 0.00 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |             pp2 |         14.65 ± 0.01 |         14.18 ± 0.00 |         14.39 ± 0.00 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |             pp3 |         21.81 ± 0.01 |         21.13 ± 0.00 |         21.41 ± 0.00 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |             pp4 |         28.95 ± 0.01 |         28.07 ± 0.02 |         28.17 ± 0.01 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |             pp8 |         55.64 ± 0.05 |         53.74 ± 0.07 |         54.09 ± 0.02 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |            pp12 |         84.56 ± 0.04 |         81.70 ± 0.05 |         78.69 ± 0.02 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |            pp16 |        109.59 ± 0.04 |        103.98 ± 0.05 |        102.64 ± 0.06 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |            pp24 |        153.34 ± 0.12 |        146.01 ± 0.20 |        144.36 ± 0.27 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |            pp32 |        189.26 ± 0.25 |        178.32 ± 0.21 |        176.97 ± 0.24 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |            pp48 |        250.65 ± 0.52 |        240.78 ± 0.37 |        232.40 ± 0.24 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |            pp64 |        293.32 ± 0.40 |        278.68 ± 0.24 |        256.34 ± 0.07 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |            pp96 |        343.33 ± 0.28 |        326.63 ± 0.14 |        268.42 ± 1.04 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |           pp128 |        376.70 ± 3.11 |        361.30 ± 1.85 |        261.48 ± 0.25 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |           pp192 |        374.38 ± 0.39 |        355.25 ± 0.60 |        269.66 ± 0.24 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |           pp256 |        403.24 ± 0.26 |        381.90 ± 0.05 |        273.29 ± 0.20 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |           pp384 |        421.41 ± 0.47 |        389.04 ± 0.25 |        282.01 ± 0.17 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |           pp512 |        431.58 ± 0.43 |        402.49 ± 0.26 |        279.97 ± 0.25 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |           pp768 |        429.48 ± 0.15 |        397.42 ± 0.06 |        273.81 ± 0.12 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |          pp1024 |        417.00 ± 0.16 |        380.25 ± 0.15 |        269.72 ± 0.18 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |          pp1536 |        414.23 ± 0.19 |        372.58 ± 0.15 |        264.15 ± 0.05 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |          pp2048 |        400.33 ± 0.02 |        353.22 ± 0.09 |        256.88 ± 0.08 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |          pp3072 |        384.13 ± 0.03 |        330.90 ± 0.04 |        241.34 ± 2.15 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |          pp4096 |        363.55 ± 0.13 |        306.30 ± 0.07 |        230.78 ± 0.50 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |          pp8192 |        310.68 ± 0.05 |        244.14 ± 0.04 |        193.29 ± 0.02 |
+| llama 8B BF16                  |  14.96 GiB |     8.03 B |            tg16 |          7.33 ± 0.00 |          7.17 ± 0.00 |          7.65 ± 0.01 |
+
+
 
 ## Arm® KleidiAI™
 KleidiAI is a library of optimized microkernels for AI workloads, specifically designed for Arm CPUs. These microkernels enhance performance and can be enabled for use by the CPU backend.

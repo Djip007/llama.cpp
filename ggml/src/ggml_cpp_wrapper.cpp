@@ -259,9 +259,7 @@ ggml_backend_buffer_type_t* backend_dev_get_extra_bufts(ggml_backend_dev_t devic
     event::~event() {}
     backend::backend(device& dev): m_device(dev) {}
     backend::~backend() { }
-    device::~device() {
-        // TODO: il faut detruire des wrapper des buffer_type???
-    }
+    device::~device() {}
     reg::~reg() {}
 
     // non virtual fct:
@@ -367,7 +365,6 @@ ggml_backend_buffer_type_t* backend_dev_get_extra_bufts(ggml_backend_dev_t devic
     ggml_backend_dev_t c_wrapper(ggml_backend_reg_t reg, device* ctx) {
         // the ctx have to be "static" / "per backend_register"
         static std::map<device*, c_device_ptr> map;
-        //static std::map<device*, ggml_backend_dev_t> map;
         if (!ctx) { return nullptr; }
 
         auto it = map.find(ctx);
@@ -394,16 +391,13 @@ ggml_backend_buffer_type_t* backend_dev_get_extra_bufts(ggml_backend_dev_t devic
                 /* .context     = */ ctx,
             };
             map[ctx] = c_device_ptr(wrapper);
-            //map[ctx] = wrapper;
             return wrapper;
         }
         return it->second.get();
-        //return it->second;
     }
 
     struct register_deleter {
         void operator()(ggml_backend_reg_t c_register) {
-            // do something with reg::c_register.context ?
             delete (c_register);
         }
     };
@@ -412,7 +406,6 @@ ggml_backend_buffer_type_t* backend_dev_get_extra_bufts(ggml_backend_dev_t devic
     ggml_backend_reg_t c_wrapper(reg* ctx) {
         // the ctx have to be static.
         static std::map<reg*, c_register_ptr> map;
-        //static std::map<reg*, ggml_backend_reg_t> map;
         if (!ctx) { return nullptr; }
 
         auto it = map.find(ctx);
@@ -428,11 +421,9 @@ ggml_backend_buffer_type_t* backend_dev_get_extra_bufts(ggml_backend_dev_t devic
                 /* .context     = */ ctx,
             };
             map[ctx] = c_register_ptr(wrapper);
-            //map[ctx] = wrapper;
             return wrapper;
         }
         return it->second.get();
-        //return it->second;
     }
 
 }
